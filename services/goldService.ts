@@ -1,14 +1,7 @@
 
 import type { GoldPrice } from '../types';
 
-// NOTE: Due to CORS restrictions, this uses a CORS proxy to fetch data from 24h.com.vn
-// For production use, consider:
-// 1. Setting up your own backend server to fetch and parse the data
-// 2. Using a serverless function (Vercel, Netlify, AWS Lambda)
-// 3. Implementing a proper API with caching to reduce load
-
 const GOLD_PRICE_URL = 'https://www.24h.com.vn/gia-vang-hom-nay-c425.html';
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 // Parse HTML string and extract gold price data
 function parseGoldPrices(html: string): GoldPrice[] {
@@ -17,6 +10,8 @@ function parseGoldPrices(html: string): GoldPrice[] {
   
   const goldPrices: GoldPrice[] = [];
   const rows = doc.querySelectorAll('.gia-vang-search-data-table tbody tr[data-seach]');
+  
+  console.log('📊 Parsing HTML, found rows:', rows.length);
   
   rows.forEach(row => {
     try {
@@ -53,20 +48,37 @@ function parseGoldPrices(html: string): GoldPrice[] {
 // Fetch and parse gold prices from 24h.com.vn
 export const fetchGoldPrices = async (): Promise<GoldPrice[]> => {
   try {
-    const url = `${CORS_PROXY}${encodeURIComponent(GOLD_PRICE_URL)}`;
+    // Add timestamp to prevent caching
+    const cacheBuster = `?_t=${Date.now()}`;
+    const url = `${GOLD_PRICE_URL}${cacheBuster}`;
+    
+    console.log('🔍 Fetching gold prices...');
+    console.log('URL:', url);
+    console.log('Timestamp:', new Date().toLocaleString('vi-VN'));
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Accept': 'text/html',
-      }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      cache: 'no-store' // Disable browser cache
     });
+    
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const html = await response.text();
+    console.log('HTML length:', html.length);
+    
     const goldPrices = parseGoldPrices(html);
+    
+    console.log('✅ Parsed gold prices:', goldPrices);
+    console.log('Total prices found:', goldPrices.length);
     
     if (goldPrices.length === 0) {
       throw new Error('No gold prices found in the response');
