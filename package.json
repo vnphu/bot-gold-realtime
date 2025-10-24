@@ -6,11 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "service": "node background-service.js",
+    "service:pm2": "pm2 start background-service.js --name gold-notifier"
   },
   "dependencies": {
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

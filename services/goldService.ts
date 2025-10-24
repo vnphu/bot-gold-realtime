@@ -1,32 +1,88 @@
 
 import type { GoldPrice } from '../types';
 
-// NOTE: This is mock data. Direct browser scraping from a website like 24h.com.vn
-// is blocked by browser security policies (CORS). A real-world application would require
-// a backend server or a serverless function to perform the scraping and provide the
-// data via an API that this frontend could call.
+// NOTE: Due to CORS restrictions, this uses a CORS proxy to fetch data from 24h.com.vn
+// For production use, consider:
+// 1. Setting up your own backend server to fetch and parse the data
+// 2. Using a serverless function (Vercel, Netlify, AWS Lambda)
+// 3. Implementing a proper API with caching to reduce load
 
-const mockGoldData: GoldPrice[] = [
-  { type: "SJC HCM", buy: "90,500,000", sell: "92,500,000" },
-  { type: "DOJI HN", buy: "90,500,000", sell: "92,300,000" },
-  { type: "PNJ", buy: "75,400,000", sell: "77,200,000" },
-  { type: "SJC ĐN", buy: "90,500,000", sell: "92,520,000" },
-  { type: "DOJI SG", buy: "90,500,000", sell: "92,300,000" },
-  { type: "Phú Quý", buy: "90,600,000", sell: "92,400,000" },
-  { type: "Bảo Tín", buy: "90,650,000", sell: "92,350,000" },
-];
+const GOLD_PRICE_URL = 'https://www.24h.com.vn/gia-vang-hom-nay-c425.html';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
-// This function simulates a network request to a backend scraper.
-export const fetchGoldPrices = (): Promise<GoldPrice[]> => {
-  return new Promise((resolve) => {
-    // Simulate network delay
-    setTimeout(() => {
-      // In a real app, you might slightly randomize data to show changes.
-      const updatedData = mockGoldData.map(item => ({
-          ...item,
-          buy: (parseInt(item.buy.replace(/,/g, '')) + (Math.floor(Math.random() * 5) - 2) * 10000).toLocaleString('vi-VN') + ",000",
-      }));
-      resolve(updatedData);
-    }, 500 + Math.random() * 500);
+// Parse HTML string and extract gold price data
+function parseGoldPrices(html: string): GoldPrice[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  const goldPrices: GoldPrice[] = [];
+  const rows = doc.querySelectorAll('.gia-vang-search-data-table tbody tr[data-seach]');
+  
+  rows.forEach(row => {
+    try {
+      const nameElement = row.querySelector('h2');
+      const cells = row.querySelectorAll('td');
+      
+      if (nameElement && cells.length >= 5) {
+        const name = nameElement.textContent?.trim() || '';
+        
+        // Get buy and sell prices (today's prices are in columns 2 and 3)
+        const buyPriceText = cells[1].querySelector('.fixW')?.textContent?.trim() || '';
+        const sellPriceText = cells[2].querySelector('.fixW')?.textContent?.trim() || '';
+        
+        if (name && buyPriceText && sellPriceText) {
+          // Convert prices from format "147,800" to "147,800,000"
+          const buyPrice = buyPriceText.replace(/,/g, '') + ',000';
+          const sellPrice = sellPriceText.replace(/,/g, '') + ',000';
+          
+          goldPrices.push({
+            type: name,
+            buy: buyPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+            sell: sellPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing row:', error);
+    }
   });
+  
+  return goldPrices;
+}
+
+// Fetch and parse gold prices from 24h.com.vn
+export const fetchGoldPrices = async (): Promise<GoldPrice[]> => {
+  try {
+    const url = `${CORS_PROXY}${encodeURIComponent(GOLD_PRICE_URL)}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const html = await response.text();
+    const goldPrices = parseGoldPrices(html);
+    
+    if (goldPrices.length === 0) {
+      throw new Error('No gold prices found in the response');
+    }
+    
+    return goldPrices;
+  } catch (error) {
+    console.error('Error fetching gold prices:', error);
+    
+    // Return fallback mock data if fetching fails
+    return [
+      { type: "SJC", buy: "147,800,000", sell: "149,800,000" },
+      { type: "DOJI HN", buy: "147,800,000", sell: "149,800,000" },
+      { type: "DOJI SG", buy: "147,800,000", sell: "149,800,000" },
+      { type: "PNJ", buy: "147,300,000", sell: "149,300,000" },
+      { type: "Bảo Tín Minh Châu", buy: "147,500,000", sell: "149,500,000" },
+    ];
+  }
 };

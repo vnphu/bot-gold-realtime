@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchGoldPrices } from './services/goldService';
 import { sendTelegramMessage } from './services/telegramService';
+import { storageService } from './services/storageService';
 import type { GoldPrice, Log } from './types';
 import Header from './components/Header';
 import ConfigForm from './components/ConfigForm';
@@ -10,16 +11,31 @@ import LogViewer from './components/LogViewer';
 import WarningBanner from './components/WarningBanner';
 
 const App: React.FC = () => {
-  const [botToken, setBotToken] = useState<string>('');
-  const [chatId, setChatId] = useState<string>('');
-  const [intervalValue, setIntervalValue] = useState<string>('1');
-  const [intervalUnit, setIntervalUnit] = useState<'minutes' | 'hours'>('hours');
+  // Load saved config on initialization
+  const savedConfig = storageService.loadConfig();
+  
+  const [botToken, setBotToken] = useState<string>(savedConfig?.botToken || '');
+  const [chatId, setChatId] = useState<string>(savedConfig?.chatId || '');
+  const [intervalValue, setIntervalValue] = useState<string>(savedConfig?.intervalValue || '1');
+  const [intervalUnit, setIntervalUnit] = useState<'minutes' | 'hours'>(savedConfig?.intervalUnit || 'hours');
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [goldData, setGoldData] = useState<GoldPrice[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
   const intervalRef = useRef<number | null>(null);
+
+  // Auto-save configuration whenever it changes
+  useEffect(() => {
+    if (botToken || chatId) { // Only save if at least one field has a value
+      storageService.saveConfig({
+        botToken,
+        chatId,
+        intervalValue,
+        intervalUnit
+      });
+    }
+  }, [botToken, chatId, intervalValue, intervalUnit]);
 
   const addLog = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
     const newLog: Log = {
