@@ -1,0 +1,5 @@
+
+{
+  "name": "Gold Price Telegram Notifier",
+  "description": "A web application to monitor gold prices and send hourly updates to a Telegram channel. This app simulates server-side scraping and notifications in a browser environment."
+}
