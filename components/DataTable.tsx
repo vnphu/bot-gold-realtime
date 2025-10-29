@@ -15,6 +15,17 @@ const DataTable: React.FC<DataTableProps> = ({ goldData }) => {
     );
   }
 
+  const formatChange = (change?: number) => {
+    if (!change || change === 0) return null;
+    const formattedValue = Math.abs(change).toLocaleString('vi-VN');
+    const isPositive = change > 0;
+    return (
+      <span className={`text-xs ml-2 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+        {isPositive ? '↑' : '↓'} {formattedValue}
+      </span>
+    );
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-700">
@@ -35,8 +46,14 @@ const DataTable: React.FC<DataTableProps> = ({ goldData }) => {
           {goldData.map((item, index) => (
             <tr key={index} className="hover:bg-gray-700/50 transition-colors">
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{item.type}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300">{item.buy}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300">{item.sell}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300">
+                {item.buy}
+                {formatChange(item.buyChange)}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-300">
+                {item.sell}
+                {formatChange(item.sellChange)}
+              </td>
             </tr>
           ))}
         </tbody>

@@ -21,19 +21,35 @@ function parseGoldPrices(html: string): GoldPrice[] {
       if (nameElement && cells.length >= 5) {
         const name = nameElement.textContent?.trim() || '';
         
-        // Get buy and sell prices (today's prices are in columns 2 and 3)
+        // Get buy price and change
         const buyPriceText = cells[1].querySelector('.fixW')?.textContent?.trim() || '';
+        const buyChangeImg = cells[1].querySelector('img');
+        const buyChangeText = cells[1].querySelector('.colorGreen, .colorRed')?.textContent?.trim() || '';
+        
+        // Get sell price and change
         const sellPriceText = cells[2].querySelector('.fixW')?.textContent?.trim() || '';
+        const sellChangeImg = cells[2].querySelector('img');
+        const sellChangeText = cells[2].querySelector('.colorGreen, .colorRed')?.textContent?.trim() || '';
         
         if (name && buyPriceText && sellPriceText) {
           // Convert prices from format "147,800" to "147,800,000"
           const buyPrice = buyPriceText.replace(/,/g, '') + ',000';
           const sellPrice = sellPriceText.replace(/,/g, '') + ',000';
           
+          // Parse price changes
+          const parsePriceChange = (changeText: string, imgElement: Element | null): number => {
+            if (!changeText) return 0;
+            const value = parseFloat(changeText.replace(/,/g, '')) * 1000;
+            const isUp = imgElement?.getAttribute('src')?.includes('up') || false;
+            return isUp ? value : -value;
+          };
+          
           goldPrices.push({
             type: name,
             buy: buyPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
-            sell: sellPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+            sell: sellPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+            buyChange: parsePriceChange(buyChangeText, buyChangeImg),
+            sellChange: parsePriceChange(sellChangeText, sellChangeImg)
           });
         }
       }

@@ -114,18 +114,22 @@ const App: React.FC = () => {
   };
   
   const formatMessage = (data: GoldPrice[]): string => {
-    let message = `*Gold Price Update - ${new Date().toLocaleString()}*\n\n`;
-    message += "```\n";
-    message += "Type         | Buy        | Sell\n";
-    message += "--------------------------------------\n";
+    const formatChange = (change?: number): string => {
+      if (!change || change === 0) return '';
+      const value = Math.abs(change).toLocaleString('vi-VN');
+      return change > 0 ? ` (↑${value})` : ` (↓${value})`;
+    };
+
+    let message = `🪙 *Giá Vàng Hôm Nay*\n`;
+    message += `_${new Date().toLocaleString('vi-VN')}_\n\n`;
+    
     data.forEach(item => {
-        const type = item.type.padEnd(12);
-        const buy = item.buy.padEnd(10);
-        const sell = item.sell.padEnd(10);
-        message += `${type} | ${buy} | ${sell}\n`;
+        message += `*${item.type}*\n`;
+        message += `  Mua: ${item.buy}${formatChange(item.buyChange)}\n`;
+        message += `  Bán: ${item.sell}${formatChange(item.sellChange)}\n\n`;
     });
-    message += "```\n";
-    message += "_Data sourced from 24h.com.vn (simulated)_";
+    
+    message += "_Nguồn: 24h.com.vn_";
     return message;
   };
 
